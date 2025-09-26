@@ -29,7 +29,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--quality", type=int, default=90)
     p.add_argument("--resize", choices=[m.value for m in ResizeMode], default="none")
     p.add_argument("--value", type=int, help="Resize width/height/percent depending on mode")
-    p.add_argument("--no-keep-aspect", action="store_true")
+    p.add_argument("--no-keep-aspect", dest="no_keep_aspect", action="store_true")
     return p.parse_args()
 
 
@@ -48,7 +48,7 @@ def main() -> None:
         jpeg_quality=args.quality,
         resize_mode=ResizeMode(args.resize),
         resize_value=args.value,
-        keep_aspect_ratio=not args.no-keep-aspect,
+        keep_aspect_ratio=not args.no_keep_aspect,
         allow_overwrite_source=False,
     )
 
