@@ -11,16 +11,39 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from PIL import Image, ImageDraw, ImageFont
-from PIL.ExifTags import TAGS
+from PIL import Image
 import exifread
+
+# 导入我们实现的水印模块
+from watermarking import (
+    GridPosition,
+    TextWatermarkOptions,
+    apply_text_watermark
+)
+from file_processing import is_supported_input
 
 
 class WatermarkTool:
     """Main class for watermarking images with EXIF data."""
     
-    def __init__(self):
-        self.supported_formats = {'.jpg', '.jpeg', '.png', '.tiff', '.tif', '.bmp'}
+    def __init__(self, font_size=24, color='white', position='bottom-right', font_name=None):
+        """Initialize the WatermarkTool with the specified settings.
+        
+        Args:
+            font_size: Font size for the watermark text
+            color: Color for the watermark text
+            position: Position of the watermark on the image
+            font_name: Name of the font to use for the watermark text (optional)
+        """
+        # 使用file_processing模块中的支持格式列表
+        from file_processing import SUPPORTED_INPUT_EXTS
+        self.supported_formats = SUPPORTED_INPUT_EXTS
+        
+        # 保存水印设置作为实例变量
+        self.font_size = font_size
+        self.color = color
+        self.position = position
+        self.font_name = font_name
         
     def extract_exif_date(self, image_path: str) -> Optional[str]:
         """Extract date from EXIF data of an image."""
@@ -53,86 +76,92 @@ class WatermarkTool:
             
         return None
     
-    def get_watermark_position(self, img_width: int, img_height: int, 
-                             text_width: int, text_height: int, 
-                             position: str) -> Tuple[int, int]:
-        """Calculate watermark position based on user preference."""
-        margin = 20
+    def _convert_position_str_to_enum(self, position_str: str) -> GridPosition:
+        """将字符串位置转换为GridPosition枚举值"""
+        position_map = {
+            'top-left': GridPosition.TOP_LEFT,
+            'top-center': GridPosition.TOP_CENTER,
+            'top-right': GridPosition.TOP_RIGHT,
+            'middle-left': GridPosition.MIDDLE_LEFT,
+            'center': GridPosition.CENTER,
+            'middle-right': GridPosition.MIDDLE_RIGHT,
+            'bottom-left': GridPosition.BOTTOM_LEFT,
+            'bottom-center': GridPosition.BOTTOM_CENTER,
+            'bottom-right': GridPosition.BOTTOM_RIGHT
+        }
+        # 查找映射
+        if position_str in position_map:
+            return position_map[position_str]
         
-        # Ensure watermark fits within image bounds
-        max_x = max(0, img_width - text_width - margin)
-        max_y = max(0, img_height - text_height - margin)
-        min_x = margin
-        min_y = margin
-        
-        if position == 'top-left':
-            x = min_x
-            y = min_y
-        elif position == 'top-right':
-            x = max_x
-            y = min_y
-        elif position == 'bottom-left':
-            x = min_x
-            y = max_y
-        elif position == 'bottom-right':
-            x = max_x
-            y = max_y
-        elif position == 'center':
-            x = max(min_x, min(max_x, (img_width - text_width) // 2))
-            y = max(min_y, min(max_y, (img_height - text_height) // 2))
-        else:
-            # Default to bottom-right
-            x = max_x
-            y = max_y
-        
-        # Final bounds check to ensure watermark is completely within image
-        x = max(0, min(x, img_width - text_width))
-        y = max(0, min(y, img_height - text_height))
-        
-        return (x, y)
+        # 尝试直接转换（例如对于枚举名称）
+        try:
+            return GridPosition(position_str)
+        except ValueError:
+            # 默认使用右下角
+            return GridPosition.BOTTOM_RIGHT
     
-    def add_watermark(self, image_path: str, output_path: str, 
-                     watermark_text: str, font_size: int = 24, 
-                     color: str = 'white', position: str = 'bottom-right'):
-        """Add watermark to an image."""
+    def _convert_color_str_to_tuple(self, color_str: str) -> Tuple[int, int, int]:
+        """将颜色字符串转换为RGB元组"""
+        # 处理颜色名称
+        color_names = {
+            'white': (255, 255, 255),
+            'black': (0, 0, 0),
+            'red': (255, 0, 0),
+            'green': (0, 255, 0),
+            'blue': (0, 0, 255),
+            'yellow': (255, 255, 0),
+            'purple': (128, 0, 128),
+            'cyan': (0, 255, 255),
+            'magenta': (255, 0, 255),
+            'gray': (128, 128, 128),
+            'grey': (128, 128, 128)
+        }
+        
+        if color_str.lower() in color_names:
+            return color_names[color_str.lower()]
+        
+        # 尝试解析RGB格式，如 "255,0,0"
+        try:
+            parts = [int(x.strip()) for x in color_str.split(',')]
+            if len(parts) == 3:
+                # 确保值在有效范围内
+                return (max(0, min(255, parts[0])),
+                        max(0, min(255, parts[1])),
+                        max(0, min(255, parts[2])))
+        except ValueError:
+            pass
+        
+        # 默认返回白色
+        return (255, 255, 255)
+    
+    def add_watermark(self, image_path: str, output_path: str, watermark_text: str):
+        """Add watermark to an image using our watermarking module."""
         try:
             # Open the image
             with Image.open(image_path) as img:
-                # Convert to RGB if necessary
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
+                # 转换位置字符串为枚举值
+                grid_position = self._convert_position_str_to_enum(self.position)
                 
-                # Create a copy for drawing
-                watermarked_img = img.copy()
-                draw = ImageDraw.Draw(watermarked_img)
+                # 转换颜色字符串为RGB元组
+                rgb_color = self._convert_color_str_to_tuple(self.color)
                 
-                # Try to load a font, fallback to default if not available
-                try:
-                    font = ImageFont.truetype("arial.ttf", font_size)
-                except (OSError, IOError):
-                    try:
-                        # Try system fonts
-                        font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", font_size)
-                    except (OSError, IOError):
-                        # Fallback to default font
-                        font = ImageFont.load_default()
-                
-                # Get text dimensions
-                bbox = draw.textbbox((0, 0), watermark_text, font=font)
-                text_width = bbox[2] - bbox[0]
-                text_height = bbox[3] - bbox[1]
-                
-                # Check if text is too large for the image
-                if text_width > img.width or text_height > img.height:
-                    print(f"Warning: Font size {font_size} is too large for image {image_path} ({img.width}x{img.height}). Text size: {text_width}x{text_height}")
-                
-                # Calculate position
-                x, y = self.get_watermark_position(
-                    img.width, img.height, text_width, text_height, position
+                # 创建水印选项
+                options = TextWatermarkOptions(
+                    text=watermark_text,
+                    font_size=self.font_size,
+                    color=rgb_color,
+                    opacity=100,  # 默认完全不透明
+                    position=grid_position,
+                    margin=20,    # 默认边距
+                    font_name=self.font_name  # 使用字体名称
                 )
                 
-                # Add the watermark text without background
-                draw.text((x, y), watermark_text, font=font, fill=color)
+                # 应用水印
+                watermarked_img = apply_text_watermark(img, options)
+                
+                # 如果是JPEG格式，需要转换为RGB
+                if img.format == 'JPEG' and watermarked_img.mode == 'RGBA':
+                    watermarked_img = watermarked_img.convert('RGB')
                 
                 # Save the watermarked image
                 watermarked_img.save(output_path, quality=95)
@@ -141,8 +170,7 @@ class WatermarkTool:
         except Exception as e:
             print(f"Error processing {image_path}: {e}")
     
-    def process_directory(self, input_path: str, font_size: int = 24, 
-                         color: str = 'white', position: str = 'bottom-right'):
+    def process_directory(self, input_path: str):
         """Process all images in a directory."""
         input_dir = Path(input_path)
         
@@ -170,6 +198,9 @@ class WatermarkTool:
         
         print(f"Found {len(image_files)} image files to process...")
         print(f"Output directory: {output_dir}")
+        print(f"Watermark settings - Font size: {self.font_size}, Color: {self.color}, Position: {self.position}")
+        if self.font_name:
+            print(f"Font name: {self.font_name}")
         
         processed_count = 0
         
@@ -190,10 +221,7 @@ class WatermarkTool:
             output_file = output_dir / image_file.name
             
             # Add watermark
-            self.add_watermark(
-                str(image_file), str(output_file), watermark_text,
-                font_size, color, position
-            )
+            self.add_watermark(str(image_file), str(output_file), watermark_text)
             processed_count += 1
         
         print(f"\n✓ Successfully processed {processed_count} images")
@@ -210,8 +238,7 @@ Examples:
   python watermark_tool.py /path/to/images
   python watermark_tool.py /path/to/images --font-size 32 --color red --position center
   python watermark_tool.py /path/to/images --position top-left --font-size 20
-        """
-    )
+        """)
     
     parser.add_argument(
         'input_path',
@@ -233,9 +260,15 @@ Examples:
     
     parser.add_argument(
         '--position', '-p',
-        choices=['top-left', 'top-right', 'center', 'bottom-left', 'bottom-right'],
+        choices=['top-left', 'top-center', 'top-right', 'middle-left', 'center', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right'],
         default='bottom-right',
         help='Position of watermark on image (default: bottom-right)'
+    )
+    
+    parser.add_argument(
+        '--font-name', '-f',
+        default=None,
+        help='Font name for watermark text (optional)'
     )
     
     args = parser.parse_args()

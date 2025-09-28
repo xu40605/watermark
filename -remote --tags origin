@@ -1,0 +1,72 @@
+[33mtag version1.0[m
+Tagger: xu40605 <xu40605@gmail.com>
+Date:   Wed Sep 24 10:32:38 2025 +0800
+
+Version 1.0 - Complete watermark tool with EXIF data extraction
+
+Features:
+- Extract date from EXIF data for watermark text
+- Multiple position options (top-left, top-right, center, bottom-left, bottom-right)
+- Customizable font size and color
+- Automatic boundary checking to prevent overflow
+- Process entire directories with subdirectory output
+- Clean text watermarks without background
+- Warning system for oversized fonts
+- Comprehensive documentation and examples
+
+[33mcommit 699d905c4c947a5e07ed9c0b3fac7ad4d8daf4d3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;33mtag: [m[1;33mversion1.0[m[33m, [m[1;33mtag: [m[1;33mv1.0[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: xu40605 <xu40605@gmail.com>
+Date:   Sat Sep 20 13:54:40 2025 +0800
+
+    Add .gitignore file to exclude unnecessary files
+
+[1mdiff --git a/.gitignore b/.gitignore[m
+[1mnew file mode 100644[m
+[1mindex 0000000..304e944[m
+[1m--- /dev/null[m
+[1m+++ b/.gitignore[m
+[36m@@ -0,0 +1,44 @@[m
+[32m+[m[32m# Python[m
+[32m+[m[32m__pycache__/[m
+[32m+[m[32m*.py[cod][m
+[32m+[m[32m*$py.class[m
+[32m+[m[32m*.so[m
+[32m+[m[32m.Python[m
+[32m+[m[32mbuild/[m
+[32m+[m[32mdevelop-eggs/[m
+[32m+[m[32mdist/[m
+[32m+[m[32mdownloads/[m
+[32m+[m[32meggs/[m
+[32m+[m[32m.eggs/[m
+[32m+[m[32mlib/[m
+[32m+[m[32mlib64/[m
+[32m+[m[32mparts/[m
+[32m+[m[32msdist/[m
+[32m+[m[32mvar/[m
+[32m+[m[32mwheels/[m
+[32m+[m[32m*.egg-info/[m
+[32m+[m[32m.installed.cfg[m
+[32m+[m[32m*.egg[m
+[32m+[m
+[32m+[m[32m# Virtual environments[m
+[32m+[m[32mvenv/[m
+[32m+[m[32menv/[m
+[32m+[m[32mENV/[m
+[32m+[m
+[32m+[m[32m# IDE[m
+[32m+[m[32m.vscode/[m
+[32m+[m[32m.idea/[m
+[32m+[m[32m*.swp[m
+[32m+[m[32m*.swo[m
+[32m+[m
+[32m+[m[32m# OS[m
+[32m+[m[32m.DS_Store[m
+[32m+[m[32mThumbs.db[m
+[32m+[m
+[32m+[m[32m# Test outputs[m
+[32m+[m[32mtest_images_watermark/[m
+[32m+[m[32m*_watermark/[m
+[32m+[m
+[32m+[m[32m# Temporary files[m
+[32m+[m[32m*.tmp[m
+[32m+[m[32m*.temp[m

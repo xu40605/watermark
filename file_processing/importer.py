@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Iterable, List
 
@@ -45,9 +46,9 @@ def discover_inputs(paths: Iterable[str | Path]) -> ImportResult:
     if not roots:
         common_root = Path.cwd()
     else:
-        common_root = Path(
-            str(Path(*Path.commonpath([str(r) for r in roots]).split("/")))
-        )
+        # 使用os.path.commonpath替代Path.commonpath以提高兼容性
+        common_root_path = os.path.commonpath([str(r) for r in roots])
+        common_root = Path(common_root_path)
 
     return ImportResult(files=unique, common_root=common_root)
 

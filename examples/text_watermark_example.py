@@ -16,7 +16,8 @@ from file_processing import (
     discover_inputs,
     export_images,
 )
-from watermarking import GridPosition, TextWatermarkOptions, apply_text_watermark
+from watermarking import (GridPosition, TextWatermarkOptions, apply_text_watermark,
+                          is_font_available, get_position_name)
 from PIL import Image
 
 
@@ -25,6 +26,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("inputs", nargs="+", help="Input files or folders")
     p.add_argument("--out", required=True, help="Output directory")
     p.add_argument("--text", required=True, help="Watermark text")
+    p.add_argument("--font-name", help="Font name (optional)")
     p.add_argument("--font-size", type=int, default=24)
     p.add_argument("--color", default="255,255,255", help="R,G,B")
     p.add_argument("--opacity", type=int, default=100)
@@ -53,14 +55,29 @@ def main() -> None:
     imp = discover_inputs(args.inputs)
     print(f"Discovered {len(imp.files)} files under {imp.common_root}")
 
+    # Check font availability
+    if args.font_name and not is_font_available(args.font_name):
+        print(f"Warning: Font '{args.font_name}' not found or cannot be loaded, using default font.")
+    
     # Prepare watermark options
     wm_options = TextWatermarkOptions(
         text=args.text,
+        font_name=args.font_name,
         font_size=args.font_size,
         color=_parse_color(args.color),
         opacity=args.opacity,
         position=GridPosition(args.pos),
     )
+    
+    # Display watermark settings
+    print(f"\nWatermark settings:")
+    print(f"- Text: {wm_options.text}")
+    print(f"- Position: {get_position_name(wm_options.position)}")
+    print(f"- Font size: {wm_options.font_size}")
+    print(f"- Color: {wm_options.color}")
+    print(f"- Opacity: {wm_options.opacity}%")
+    if wm_options.font_name:
+        print(f"- Font name: {wm_options.font_name}")
 
     # Render and export
     out_dir = Path(args.out)

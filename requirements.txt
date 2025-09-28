@@ -1,2 +1,7 @@
 Pillow>=9.0.0
 exifread>=2.3.0
+tkinterdnd2>=0.3.0
+
+
+
+

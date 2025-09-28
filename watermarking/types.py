@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Tuple
+from typing import Tuple, Optional
 
 
 class GridPosition(str, Enum):
@@ -24,6 +24,7 @@ class TextWatermarkOptions:
     """Options to control text watermark rendering.
 
     - text: watermark content
+    - font_name: name of the font to use (optional)
     - font_size: integer pixel size
     - color: RGB tuple (0-255)
     - opacity: 0-100 percentage
@@ -32,6 +33,7 @@ class TextWatermarkOptions:
     """
 
     text: str
+    font_name: Optional[str] = None
     font_size: int = 24
     color: Tuple[int, int, int] = (255, 255, 255)
     opacity: int = 100
